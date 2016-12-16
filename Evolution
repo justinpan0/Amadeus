@@ -1,0 +1,70 @@
+import random
+import numpy as np
+
+class Evolution(object):
+
+    def __init__(self, sizes, gen_0):
+        """The list ``sizes`` contains the number of neurons in the
+        respective layers of the network.  For example, if the list
+        was [2, 3, 1] then it would be a three-layer network, with the
+        first layer containing 2 neurons, the second layer 3 neurons,
+        and the third layer 1 neuron.  The biases and weights for the
+        network are initialized randomly, using a Gaussian
+        distribution with mean 0, and variance 1.  Note that the first
+        layer is assumed to be an input layer, and by convention we
+        won't set any biases for those neurons, since biases are only
+        ever used in computing the outputs from later layers."""
+        self.gen = gen_0
+        self.num_layers = len(sizes)
+        self.sizes = sizes
+        self.biases = [np.random.randn(gen_0, y, 1) for y in sizes[1:]]
+        self.weights = [np.random.randn(gen_0, y, x)
+                        for x, y in zip(sizes[:-1], sizes[1:])]
+
+
+    def feedforward(self, a):
+        """Return the output of the network if ``a`` is input."""
+        for gen in self.gen:
+            for b, w in zip(self.biases[gen], self.weights[gen]):
+                a[gen] = sigmoid(np.dot(w, a)+b)
+        return a
+
+    def Selection(self, test_data):
+        """Return the number of test inputs for which the neural
+        network outputs the correct result. Note that the neural
+        network's output is assumed to be the index of whichever
+        neuron in the final layer has the highest activation."""
+        test_results = [(np.argmax(self.feedforward(x)), y)
+                        for (x, y) in test_data]
+        sorted_test = sum(int(x == y) for (x, y) in test_results).argsort()
+        self.gen = int(self.gen - self.gen*0.1)
+        for x in xrange(self.gen):
+            self.biases = self.biases[sorted_test[x/10:]] 
+            self.weights = self.weights[sorted_test[x/10:]] 
+    
+    def SGD(self, training_data, generation, mini_batch_size, eta,
+                test_data=None):
+            """Train the neural network using mini-batch stochastic
+            gradient descent.  The ``training_data`` is a list of tuples
+            ``(x, y)`` representing the training inputs and the desired
+            outputs.  The other non-optional parameters are
+            self-explanatory.  If ``test_data`` is provided then the
+            network will be evaluated against the test data after each
+            epoch, and partial progress printed out.  This is useful for
+            tracking progress, but slows things down substantially."""
+            if test_data: n_test = len(test_data)
+            n = len(training_data)
+            for j in xrange(generation):
+                random.shuffle(training_data)
+                mini_batches = [
+                    training_data[k:k+mini_batch_size]
+                    for k in xrange(0, n, mini_batch_size)]
+                for mini_batch in mini_batches:
+                    self.update_mini_batch(mini_batch, eta)
+                if test_data:
+                    print "generation {0}: {1} / {2}".format(
+                        j, self.evaluate(test_data), n_test)
+                     print self.biases
+                else:
+                    print "generation {0} complete".format(j)
+

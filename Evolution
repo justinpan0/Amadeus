@@ -18,15 +18,13 @@ class Evolution(object):
         self.num_layers = len(sizes)
         self.sizes = sizes
         self.biases = [np.random.randn(gen_0, y, 1) for y in sizes[1:]]
-        self.weights = [np.random.randn(gen_0, y, x)
-                        for x, y in zip(sizes[:-1], sizes[1:])]
+        self.weights = [np.random.randn(gen_0, y, x) for x, y in zip(sizes[:-1], sizes[1:])]
 
 
-    def feedforward(self, a):
+    def feedforward(self, individual, a):
         """Return the output of the network if ``a`` is input."""
-        for gen in self.gen:
-            for b, w in zip(self.biases[gen], self.weights[gen]):
-                a[gen] = sigmoid(np.dot(w, a)+b)
+        for b, w in zip(self.biases[individual], self.weights[individual]):
+                a = sigmoid(np.dot(w, a)+b)
         return a
 
     def Selection(self, test_data):
@@ -34,8 +32,8 @@ class Evolution(object):
         network outputs the correct result. Note that the neural
         network's output is assumed to be the index of whichever
         neuron in the final layer has the highest activation."""
-        test_results = [(np.argmax(self.feedforward(x)), y)
-                        for (x, y) in test_data]
+        test_results = [((np.argmax(self.feedforward(individual,x)), y)
+                        for (x, y) in test_data) for individual in xrange(self.gen)]
         sorted_test = sum(int(x == y) for (x, y) in test_results).argsort()
         self.gen = int(self.gen - self.gen*0.1)
         for x in xrange(self.gen):
@@ -56,15 +54,16 @@ class Evolution(object):
             n = len(training_data)
             for j in xrange(generation):
                 random.shuffle(training_data)
-                mini_batches = [
-                    training_data[k:k+mini_batch_size]
-                    for k in xrange(0, n, mini_batch_size)]
+                mini_batches = [training_data[k:k+mini_batch_size] for k in xrange(0, n, mini_batch_size)]
                 for mini_batch in mini_batches:
                     self.update_mini_batch(mini_batch, eta)
                 if test_data:
                     print "generation {0}: {1} / {2}".format(
                         j, self.evaluate(test_data), n_test)
-                     print self.biases
+                    print self.biases
                 else:
                     print "generation {0} complete".format(j)
 
+def sigmoid(z):
+        """The sigmoid function."""
+        return 1.0/(1.0+np.exp(-z))
